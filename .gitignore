@@ -1,0 +1,7 @@
+*.png
+*.ncb
+*.suo
+*.user
+*.py
+Debug
+Release
