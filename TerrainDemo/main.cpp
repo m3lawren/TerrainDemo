@@ -49,66 +49,66 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 // the entry point for any Windows program
 int WINAPI WinMain(HINSTANCE hInstance,
-                   HINSTANCE hPrevInstance,
-                   LPSTR lpCmdLine,
-                   int nCmdShow)
+	               HINSTANCE hPrevInstance,
+	               LPSTR lpCmdLine,
+	               int nCmdShow)
 {
-    HWND hWnd;
-    WNDCLASSEX wc;
+	HWND hWnd;
+	WNDCLASSEX wc;
 
-    ZeroMemory(&wc, sizeof(WNDCLASSEX));
+	ZeroMemory(&wc, sizeof(WNDCLASSEX));
 
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WindowProc;
-    wc.hInstance = hInstance;
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.lpszClassName = "WindowClass";
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = WindowProc;
+	wc.hInstance = hInstance;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.lpszClassName = "WindowClass";
 
-    RegisterClassEx(&wc);
+	RegisterClassEx(&wc);
 
-    hWnd = CreateWindowEx(NULL, "WindowClass", "Direct3D",
-                          WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
-                          NULL, NULL, hInstance, NULL);
+	hWnd = CreateWindowEx(NULL, "WindowClass", "Direct3D",
+	                      WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
+	                      NULL, NULL, hInstance, NULL);
 
-    ShowWindow(hWnd, nCmdShow);
+	ShowWindow(hWnd, nCmdShow);
 
-    // set up and initialize Direct3D
-    initD3D(hWnd);
+	// set up and initialize Direct3D
+	initD3D(hWnd);
 
-    // enter the main loop:
+	// enter the main loop:
 
-    MSG msg;
+	MSG msg;
 
-    while(TRUE)
-    {
-        while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
+	while(TRUE)
+	{
+	    while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+	    {
+	        TranslateMessage(&msg);
+	        DispatchMessage(&msg);
+	    }
 
-        if(msg.message == WM_QUIT)
-            break;
+	    if(msg.message == WM_QUIT)
+	        break;
 
-        render_frame();
-    }
+	    render_frame();
+	}
 
-    // clean up DirectX and COM
-    cleanD3D();
+	// clean up DirectX and COM
+	cleanD3D();
 
-    return msg.wParam;
+	return msg.wParam;
 }
 
 
 // this is the main message handler for the program
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch(message)
-    {
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;       
+	switch(message)
+	{
+	    case WM_DESTROY:
+	        PostQuitMessage(0);
+	        return 0;       
 		case WM_KEYDOWN:
 			switch (wParam) {
 				case VK_ESCAPE: case 'q': case 'Q':
@@ -128,9 +128,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					break;
 			}		
 			return 0;		
-    }
+	}
 
-    return DefWindowProc (hWnd, message, wParam, lParam);
+	return DefWindowProc (hWnd, message, wParam, lParam);
 }
 
 void setAA(D3DPRESENT_PARAMETERS& d3dpp) {
@@ -149,33 +149,33 @@ void setAA(D3DPRESENT_PARAMETERS& d3dpp) {
 // this function initializes and prepares Direct3D for use
 void initD3D(HWND hWnd)
 {
-    d3d = Direct3DCreate9(D3D_SDK_VERSION);
+	d3d = Direct3DCreate9(D3D_SDK_VERSION);
 
-    D3DPRESENT_PARAMETERS d3dpp;
+	D3DPRESENT_PARAMETERS d3dpp;
 
-    ZeroMemory(&d3dpp, sizeof(d3dpp));
-    d3dpp.Windowed = TRUE;    
-    d3dpp.hDeviceWindow = hWnd;
-    d3dpp.BackBufferFormat = D3DFMT_X8R8G8B8;
-    d3dpp.BackBufferWidth = SCREEN_WIDTH;
-    d3dpp.BackBufferHeight = SCREEN_HEIGHT;	
+	ZeroMemory(&d3dpp, sizeof(d3dpp));
+	d3dpp.Windowed = TRUE;    
+	d3dpp.hDeviceWindow = hWnd;
+	d3dpp.BackBufferFormat = D3DFMT_X8R8G8B8;
+	d3dpp.BackBufferWidth = SCREEN_WIDTH;
+	d3dpp.BackBufferHeight = SCREEN_HEIGHT;	
 	d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 	d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
 	d3dpp.EnableAutoDepthStencil = TRUE;
 
 	setAA(d3dpp);
 
-    // create a device class using this information and the info from the d3dpp stuct
-    HRESULT r = d3d->CreateDevice(D3DADAPTER_DEFAULT,
-                      D3DDEVTYPE_HAL,
-                      hWnd,
-                      D3DCREATE_SOFTWARE_VERTEXPROCESSING,
-                      &d3dpp,
-                      &d3ddev);
+	// create a device class using this information and the info from the d3dpp stuct
+	HRESULT r = d3d->CreateDevice(D3DADAPTER_DEFAULT,
+	                  D3DDEVTYPE_HAL,
+	                  hWnd,
+	                  D3DCREATE_SOFTWARE_VERTEXPROCESSING,
+	                  &d3dpp,
+	                  &d3ddev);
 
-    init_graphics();    // call the function to initialize the triangle
+	init_graphics();    // call the function to initialize the triangle
 
-    d3ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
+	d3ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
 	//d3ddev->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 	d3ddev->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
 	d3ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);	
@@ -202,13 +202,13 @@ void render_frame(void)
 		ntick = bukkits[bukidx].LowPart / 10000 - bukkits[pbuk].LowPart / 10000;
 	}
 
-    d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(255, 255, 255), 1.0f, 0);
+	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(255, 255, 255), 1.0f, 0);
 	d3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
 
-    d3ddev->BeginScene();
+	d3ddev->BeginScene();
 
-    // select which vertex format we are using
-    d3ddev->SetFVF(CUSTOMFVF);
+	// select which vertex format we are using
+	d3ddev->SetFVF(CUSTOMFVF);
 
 	RECT r;
 	r.left = 0; 
@@ -227,27 +227,27 @@ void render_frame(void)
 	font->DrawText(NULL, buff, -1, &r, DT_CALCRECT, D3DCOLOR_XRGB(1, 1, 1));
 	font->DrawText(NULL, buff, -1, &r, 0, D3DCOLOR_XRGB(0, 255, 0));
 
-    // SET UP THE PIPELINE    
+	// SET UP THE PIPELINE    
 
-    D3DXMATRIX matView;    // the view transform matrix
+	D3DXMATRIX matView;    // the view transform matrix
 
-    D3DXMatrixLookAtLH(&matView,
-                       &D3DXVECTOR3 (0.0f, 0.0f, -15.0f),    // the camera position
-                       &D3DXVECTOR3 (0.0f, 0.0f, 0.0f),    // the look-at position
-                       &D3DXVECTOR3 (0.0f, 1.0f, 0.0f));    // the up direction
+	D3DXMatrixLookAtLH(&matView,
+	                   &D3DXVECTOR3 (0.0f, 0.0f, -15.0f),    // the camera position
+	                   &D3DXVECTOR3 (0.0f, 0.0f, 0.0f),    // the look-at position
+	                   &D3DXVECTOR3 (0.0f, 1.0f, 0.0f));    // the up direction
 
-    d3ddev->SetTransform(D3DTS_VIEW, &matView);    // set the view transform to matView
+	d3ddev->SetTransform(D3DTS_VIEW, &matView);    // set the view transform to matView
 
-    D3DXMATRIX matProjection;     // the projection transform matrix
+	D3DXMATRIX matProjection;     // the projection transform matrix
 
-    D3DXMatrixPerspectiveFovLH(&matProjection,
-                               D3DXToRadian(45),    // the horizontal field of view
-                               (FLOAT)SCREEN_WIDTH / (FLOAT)SCREEN_HEIGHT, // aspect ratio
-                               1.0f,    // the near view-plane
-                               100.0f);    // the far view-plane
+	D3DXMatrixPerspectiveFovLH(&matProjection,
+	                           D3DXToRadian(45),    // the horizontal field of view
+	                           (FLOAT)SCREEN_WIDTH / (FLOAT)SCREEN_HEIGHT, // aspect ratio
+	                           1.0f,    // the near view-plane
+	                           100.0f);    // the far view-plane
 
-    d3ddev->SetTransform(D3DTS_PROJECTION, &matProjection);    // set the projection
-    
+	d3ddev->SetTransform(D3DTS_PROJECTION, &matProjection);    // set the projection
+	
 	D3DXMATRIX matRotateYaw;
 	D3DXMATRIX matRotatePitch;
 	D3DXMatrixRotationX(&matRotatePitch, curPitch);
@@ -292,9 +292,9 @@ void render_frame(void)
 			T_STEPS * 2);
 	}
 
-    d3ddev->EndScene();
+	d3ddev->EndScene();
 
-    d3ddev->Present(NULL, NULL, NULL, NULL);
+	d3ddev->Present(NULL, NULL, NULL, NULL);
 
 	bukidx++;
 	bukidx %= NBUKKIT;
@@ -307,8 +307,8 @@ void cleanD3D(void)
 	indexBuffer->Release();
 	terrainBuffer->Release();
 	font->Release();
-    d3ddev->Release();    // close and release the 3D device
-    d3d->Release();    // close and release Direct3D
+	d3ddev->Release();    // close and release the 3D device
+	d3d->Release();    // close and release Direct3D
 }
 
 
