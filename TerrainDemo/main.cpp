@@ -16,7 +16,7 @@
 
 #define T_WIDTH		8.0f
 #define T_HEIGHT	8.0f
-#define T_STEPS		64
+#define T_STEPS		32
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))
 
@@ -254,43 +254,17 @@ void render_frame(void)
 	D3DXMatrixRotationZ(&matRotateYaw, curYaw);
 
 	d3ddev->SetTransform(D3DTS_WORLD, &(matRotateYaw * matRotatePitch));	
-
-	CUSTOMVERTEX* vertices;
-	terrainBuffer->Lock(0, 0, (void**)&vertices, 0);
-	for (unsigned i = 0; i < T_STEPS + 1; i++) {
-		float y = -(T_HEIGHT / 2.0f) + i * T_HEIGHT / T_STEPS;
-		for (unsigned j = 0; j < T_STEPS + 1; j++) {
-			float x = -(T_WIDTH / 2.0f) + j * T_WIDTH / T_STEPS;
-			CUSTOMVERTEX& cur = vertices[T_OFF(j,i)];
-			cur.X = x;
-			cur.Y = y;
-			cur.Z = sin((x+y)*M_PI/2.0) / 2.0f;
-			cur.COLOR = D3DCOLOR_XRGB(0, 0, 0);
-		}
-	}
-	terrainBuffer->Unlock();
 	
 	d3ddev->SetStreamSource(0, terrainBuffer, 0, sizeof(CUSTOMVERTEX));
-	for (unsigned row = 0; row < T_STEPS; row++) {
-		short* indices;
-		indexBuffer->Lock(0, 0, (void**)&indices, 0);
-		indices[0] = T_OFF(0, row);
-		indices[1] = T_OFF(0, row + 1);
-		
-		for (unsigned col = 1; col < T_STEPS + 1; col++) {
-			indices[col * 2] = T_OFF(col, row);
-			indices[col * 2 + 1] = T_OFF(col, row + 1);
-		}
-		indexBuffer->Unlock();
-		d3ddev->SetIndices(indexBuffer);
-		d3ddev->DrawIndexedPrimitive(
-			D3DPT_TRIANGLESTRIP,
-			0, 
-			0,
-			(T_STEPS + 1) * (T_STEPS + 1),
-			0, 
-			T_STEPS * 2);
-	}
+	d3ddev->SetIndices(indexBuffer);
+	
+	d3ddev->DrawIndexedPrimitive(
+		D3DPT_TRIANGLESTRIP, 
+		0,
+		0,
+		(T_STEPS + 1) * (T_STEPS + 1),
+		0, 
+		((2 * (T_STEPS + 1) * T_STEPS + T_STEPS - 1)) - 2);
 
 	d3ddev->EndScene();
 
@@ -325,11 +299,55 @@ void init_graphics(void)
 		&terrainBuffer,
 		NULL);
 	d3ddev->CreateIndexBuffer(
-		128 * sizeof(short),
+		(2 * (T_STEPS + 1) * T_STEPS + T_STEPS - 1) * sizeof(short),
 		D3DUSAGE_WRITEONLY,
 		D3DFMT_INDEX16,
 		D3DPOOL_MANAGED,
 		&indexBuffer,
 		NULL);
 
+	CUSTOMVERTEX* vertices;
+	terrainBuffer->Lock(0, 0, (void**)&vertices, 0);
+	for (unsigned i = 0; i < T_STEPS + 1; i++) {
+		float y = -(T_HEIGHT / 2.0f) + i * T_HEIGHT / T_STEPS;
+		for (unsigned j = 0; j < T_STEPS + 1; j++) {
+			float x = -(T_WIDTH / 2.0f) + j * T_WIDTH / T_STEPS;
+			CUSTOMVERTEX& cur = vertices[T_OFF(j,i)];
+			cur.X = x;
+			cur.Y = y;
+			cur.Z = (float)sin((x+y)*M_PI/2.0) / 4.0f + (float)sin((x-y)*M_PI / 2.0) / 4.0f;
+			cur.COLOR = D3DCOLOR_XRGB(0, 0, 0);
+		}
+	}
+	terrainBuffer->Unlock();
+
+	short* indices;
+	indexBuffer->Lock(0, 0, (void**)&indices, 0);	
+	unsigned index = 0;
+	for (unsigned z = 0; z < T_STEPS; z++) {
+		if (z % 2) {
+			// odd
+			int x;
+			for (x = T_STEPS; x >= 0; x--) {
+				indices[index++] = x + (z * (T_STEPS + 1));
+				indices[index++] = x + ((z + 1) * (T_STEPS + 1));
+			}
+
+			if (z != T_STEPS - 1) {
+				indices[index++] = ++x + z * (T_STEPS + 1);
+			}
+		} else {
+			// even
+			int x;
+			for (x = 0; x < T_STEPS + 1; x++) {
+				indices[index++] = x + (z * (T_STEPS + 1));
+				indices[index++] = x + ((z + 1) * (T_STEPS + 1));
+			}
+
+			if (z != T_STEPS - 1) {
+				indices[index++] = --x + (z + 1) * (T_STEPS + 1);
+			}
+		}
+	}
+	indexBuffer->Unlock();
 }
