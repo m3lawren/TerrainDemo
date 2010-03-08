@@ -8,7 +8,7 @@
 #include <cstdio>
 
 #undef M_PI
-#define M_PI 3.141592653589793238462643 
+#define M_PI 3.141592653589793238462643f
 
 // define the screen resolution
 #define SCREEN_WIDTH 800
@@ -16,7 +16,7 @@
 
 #define T_WIDTH		8.0f
 #define T_HEIGHT	8.0f
-#define T_STEPS		32
+#define T_STEPS		128
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))
 #define T_Y(i) (-(T_HEIGHT / 2.0f) + (i) * T_HEIGHT / T_STEPS)
@@ -24,7 +24,10 @@
 
 #define ANGLE_DELTA (float)(M_PI / 32.0f)
 
-#define T_GENFUNC(x,y) (sin((x)+(y)) + sin((x)-(y))) / 2.0f
+#define T_GENFUNC(x,y) (sin((x)+(y)) + sin((x)-(y))) / 1.5f
+
+#define CHECK_PITCH(p) if (p <= -M_PI / 2.0f) p = -M_PI / 2.0f + ANGLE_DELTA; else if (p >= M_PI / 2.0f) p = M_PI / 2.0f - ANGLE_DELTA;
+#define CHECK_YAW(y) while (y < 0.0f) y += 2 * M_PI; while (y >= 2 * M_PI) y -= 2 * M_PI;
 
 // include the Direct3D Library files
 #pragma comment (lib, "d3d9.lib")
@@ -37,8 +40,9 @@ LPDIRECT3DVERTEXBUFFER9 terrainBuffer;
 LPD3DXFONT font;
 D3DLIGHT9 light;
 D3DMATERIAL9 material;
-float curYaw = (float)M_PI / 4.0f;
+float curYaw = 0.0f;
 float curPitch = (float)M_PI / 8.0f;
+float curScale = 1.0f;
 
 // function prototypes
 void initD3D(HWND hWnd);    // sets up and initializes Direct3D
@@ -121,19 +125,25 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					break;
 				case VK_RIGHT:
 					curYaw -= ANGLE_DELTA;
-					if (curYaw < 0) curYaw += 2.0f * (float)M_PI;
+					CHECK_YAW(curYaw);
 					break;
 				case VK_LEFT:
 					curYaw += ANGLE_DELTA;
-					curYaw = fmod(curYaw, 2.0f * (float)M_PI);
+					CHECK_YAW(curYaw);
 					break;
 				case VK_UP:
-					curPitch += ANGLE_DELTA;
-					curPitch = fmod(curPitch, 2.0f * (float)M_PI);
+					curPitch += ANGLE_DELTA;					
+					CHECK_PITCH(curPitch);
 					break;
 				case VK_DOWN:
 					curPitch -= ANGLE_DELTA;
-					if (curPitch < 0) curPitch += 2.0f * (float)M_PI;
+					CHECK_PITCH(curPitch);
+					break;
+				case VK_NEXT:
+					curScale *= 1.1f;
+					break;
+				case VK_PRIOR:
+					curScale /= 1.1f;
 					break;
 			}		
 			return 0;		
@@ -248,7 +258,7 @@ void render_frame(void)
 	font->DrawText(NULL, buff, -1, &r, DT_CALCRECT, D3DCOLOR_XRGB(1, 1, 1));
 	int h = font->DrawText(NULL, buff, -1, &r, 0, D3DCOLOR_XRGB(0, 255, 0));
 
-	sprintf_s(buff, 1024, "Pitch: %0.3f\nYaw  : %0.3f", curPitch, curYaw);
+	sprintf_s(buff, 1024, "Pitch: %0.3f\nYaw  : %0.3f\nScale: %0.3f", curPitch, curYaw, curScale);
 	r.left = 0;
 	r.top = h;
 	r.bottom = h;
@@ -265,11 +275,13 @@ void render_frame(void)
 	D3DXMATRIX matView;    // the view transform matrix	
 	D3DXMATRIX matRotateYaw;
 	D3DXMATRIX matRotatePitch;
+	D3DXMATRIX matScale;
 	D3DXMatrixRotationX(&matRotatePitch, -curPitch);
 	D3DXMatrixRotationZ(&matRotateYaw, curYaw);
+	D3DXMatrixScaling(&matScale, curScale, curScale, curScale);
 
 	D3DXVECTOR4 vecCamera;
-	D3DXVec3Transform(&vecCamera, &D3DXVECTOR3(0.0f, -15.0f, 0.0f), &(matRotatePitch * matRotateYaw));
+	D3DXVec3Transform(&vecCamera, &D3DXVECTOR3(0.0f, -15.0f, 0.0f), &(matRotatePitch * matRotateYaw * matScale));
 
 	D3DXMatrixLookAtLH(&matView,
 	                   &D3DXVECTOR3(vecCamera.x, vecCamera.y, vecCamera.z),    // the camera position
