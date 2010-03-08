@@ -1,6 +1,8 @@
 #ifndef __TERRAIN_TERRAIN_H__
 #define __TERRAIN_TERRAIN_H__
 
+#define _T_NUM_WEIGHTS 25
+
 namespace Terrain {
 
 	class Terrain {
@@ -13,6 +15,9 @@ namespace Terrain {
 	private:
 		Terrain(const Terrain&);
 		Terrain& operator=(const Terrain&);
+
+		// xsc, ysc, osc, off
+		float _weights[_T_NUM_WEIGHTS][4];
 	};
 
 };

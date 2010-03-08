@@ -1,3 +1,5 @@
+#include <Terrain/Terrain.h>
+
 // include the basic windows header files and the Direct3D header file
 #include <windows.h>
 #include <windowsx.h>
@@ -6,6 +8,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 
 #undef M_PI
 #define M_PI 3.141592653589793238462643f
@@ -16,7 +19,7 @@
 
 #define T_WIDTH		8.0f
 #define T_HEIGHT	8.0f
-#define T_STEPS		128
+#define T_STEPS		256
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))
 #define T_Y(i) (-(T_HEIGHT / 2.0f) + (i) * T_HEIGHT / T_STEPS)
@@ -24,7 +27,7 @@
 
 #define ANGLE_DELTA (float)(M_PI / 32.0f)
 
-#define T_GENFUNC(x,y) (sin((x)+(y)) + sin((x)-(y))) / 1.5f
+#define T_GENFUNC(x,y) (sin(2.0f * (x)+(y)) + sin((x)-1.5f * (y))) / 2.5f
 
 #define CHECK_PITCH(p) if (p <= -M_PI / 2.0f) p = -M_PI / 2.0f + ANGLE_DELTA; else if (p >= M_PI / 2.0f) p = M_PI / 2.0f - ANGLE_DELTA;
 #define CHECK_YAW(y) while (y < 0.0f) y += 2 * M_PI; while (y >= 2 * M_PI) y -= 2 * M_PI;
@@ -66,6 +69,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	WNDCLASSEX wc;
 
 	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	srand(time(NULL));
 
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -340,6 +345,9 @@ void init_graphics(void)
 		&terrainBuffer,
 		NULL);
 
+	Terrain::Terrain t;
+#undef T_GENFUNC
+#define T_GENFUNC t.height
 	CUSTOMVERTEX* vertices;
 	unsigned index = 0;
 	terrainBuffer->Lock(0, 0, (void**)&vertices, 0);
