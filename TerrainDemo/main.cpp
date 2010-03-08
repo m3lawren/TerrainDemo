@@ -16,7 +16,7 @@
 
 #define T_WIDTH		8.0f
 #define T_HEIGHT	8.0f
-#define T_STEPS		64
+#define T_STEPS		128
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))
 #define T_Y(i) (-(T_HEIGHT / 2.0f) + (i) * T_HEIGHT / T_STEPS)
@@ -37,8 +37,8 @@ LPDIRECT3DVERTEXBUFFER9 terrainBuffer;
 LPD3DXFONT font;
 D3DLIGHT9 light;
 D3DMATERIAL9 material;
-float curYaw = 0.0f;
-float curPitch = 0.0f;
+float curYaw = M_PI / 4.0f;
+float curPitch = -M_PI / 8.0f;
 
 // function prototypes
 void initD3D(HWND hWnd);    // sets up and initializes Direct3D
@@ -190,7 +190,8 @@ void initD3D(HWND hWnd)
 	ZeroMemory(&light, sizeof(light));
 	light.Type = D3DLIGHT_DIRECTIONAL;
 	light.Diffuse.r = light.Diffuse.g = light.Diffuse.b = light.Diffuse.a = 0.75f;	
-	light.Direction.x = light.Direction.z = 1.0f;
+	light.Direction.x = -1.0f;
+	light.Direction.z = 1.0f;
 	light.Direction.y = 0.0f;
 	light.Range = 1000.0f;
 
@@ -249,14 +250,21 @@ void render_frame(void)
 
 	// SET UP THE PIPELINE    
 
-	D3DXMATRIX matView;    // the view transform matrix
+	D3DXMATRIX matView;    // the view transform matrix	
+	D3DXMATRIX matRotateYaw;
+	D3DXMATRIX matRotatePitch;
+	D3DXMatrixRotationX(&matRotatePitch, curPitch);
+	D3DXMatrixRotationZ(&matRotateYaw, curYaw);
+
+	D3DXVECTOR4 vecCamera;
+	D3DXVec3Transform(&vecCamera, &D3DXVECTOR3(0.0f, -15.0f, 0.0f), &(matRotatePitch * matRotateYaw));
 
 	D3DXMatrixLookAtLH(&matView,
-	                   &D3DXVECTOR3 (0.0f, 0.0f, -15.0f),    // the camera position
+	                   &D3DXVECTOR3(vecCamera.x, vecCamera.y, vecCamera.z),    // the camera position
 	                   &D3DXVECTOR3 (0.0f, 0.0f, 0.0f),    // the look-at position
-	                   &D3DXVECTOR3 (0.0f, 1.0f, 0.0f));    // the up direction
+	                   &D3DXVECTOR3 (0.0f, 0.0f, 1.0f));    // the up direction
 
-	d3ddev->SetTransform(D3DTS_VIEW, &matView);    // set the view transform to matView
+	d3ddev->SetTransform(D3DTS_VIEW, &matView);    // set the view transform to matView	
 
 	D3DXMATRIX matProjection;     // the projection transform matrix
 
@@ -266,14 +274,11 @@ void render_frame(void)
 	                           1.0f,    // the near view-plane
 	                           100.0f);    // the far view-plane
 
-	d3ddev->SetTransform(D3DTS_PROJECTION, &matProjection);    // set the projection
-	
-	D3DXMATRIX matRotateYaw;
-	D3DXMATRIX matRotatePitch;
-	D3DXMatrixRotationX(&matRotatePitch, curPitch);
-	D3DXMatrixRotationZ(&matRotateYaw, curYaw);
+	d3ddev->SetTransform(D3DTS_PROJECTION, &matProjection);    // set the projection	
 
-	d3ddev->SetTransform(D3DTS_WORLD, &(matRotateYaw * matRotatePitch));	
+	D3DXMATRIX matIdentity;
+	D3DXMatrixIdentity(&matIdentity);
+	d3ddev->SetTransform(D3DTS_WORLD, &matIdentity);
 	
 	d3ddev->SetStreamSource(0, terrainBuffer, 0, sizeof(CUSTOMVERTEX));	
 	
