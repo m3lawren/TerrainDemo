@@ -16,7 +16,7 @@
 
 #define T_WIDTH		8.0f
 #define T_HEIGHT	8.0f
-#define T_STEPS		128
+#define T_STEPS		32
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))
 #define T_Y(i) (-(T_HEIGHT / 2.0f) + (i) * T_HEIGHT / T_STEPS)
@@ -24,7 +24,7 @@
 
 #define ANGLE_DELTA (float)(M_PI / 32.0f)
 
-#define T_GENFUNC(x,y) (sin(2.0f * x + y) + sin(2.0f * y + x) - sin((x)+(y))) / 3.0f
+#define T_GENFUNC(x,y) (sin((x)+(y)) + sin((x)-(y))) / 2.0f
 
 // include the Direct3D Library files
 #pragma comment (lib, "d3d9.lib")
@@ -37,8 +37,8 @@ LPDIRECT3DVERTEXBUFFER9 terrainBuffer;
 LPD3DXFONT font;
 D3DLIGHT9 light;
 D3DMATERIAL9 material;
-float curYaw = M_PI / 4.0f;
-float curPitch = -M_PI / 8.0f;
+float curYaw = (float)M_PI / 4.0f;
+float curPitch = (float)M_PI / 8.0f;
 
 // function prototypes
 void initD3D(HWND hWnd);    // sets up and initializes Direct3D
@@ -119,17 +119,21 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				case VK_ESCAPE: case 'q': case 'Q':
 					DestroyWindow(hWnd);
 					break;
-				case VK_LEFT:
-					curYaw -= ANGLE_DELTA;
-					break;
 				case VK_RIGHT:
+					curYaw -= ANGLE_DELTA;
+					if (curYaw < 0) curYaw += 2.0f * (float)M_PI;
+					break;
+				case VK_LEFT:
 					curYaw += ANGLE_DELTA;
+					curYaw = fmod(curYaw, 2.0f * (float)M_PI);
 					break;
 				case VK_UP:
 					curPitch += ANGLE_DELTA;
+					curPitch = fmod(curPitch, 2.0f * (float)M_PI);
 					break;
 				case VK_DOWN:
 					curPitch -= ANGLE_DELTA;
+					if (curPitch < 0) curPitch += 2.0f * (float)M_PI;
 					break;
 			}		
 			return 0;		
@@ -242,7 +246,15 @@ void render_frame(void)
 		strcpy_s(buff, 1024, "FPS: ??");
 	}
 	font->DrawText(NULL, buff, -1, &r, DT_CALCRECT, D3DCOLOR_XRGB(1, 1, 1));
-	font->DrawText(NULL, buff, -1, &r, 0, D3DCOLOR_XRGB(0, 255, 0));
+	int h = font->DrawText(NULL, buff, -1, &r, 0, D3DCOLOR_XRGB(0, 255, 0));
+
+	sprintf_s(buff, 1024, "Pitch: %0.3f\nYaw  : %0.3f", curPitch, curYaw);
+	r.left = 0;
+	r.top = h;
+	r.bottom = h;
+	r.right = 0;
+	font->DrawTextA(NULL, buff, -1, &r, DT_CALCRECT, D3DCOLOR_XRGB(0, 0, 0));
+	font->DrawTextA(NULL, buff, -1, &r, 0, D3DCOLOR_XRGB(0, 255, 0));
 
 	material.Diffuse.r = material.Diffuse.g = material.Diffuse.b = material.Diffuse.a = 1.0f;
 	material.Ambient = material.Diffuse;
@@ -253,7 +265,7 @@ void render_frame(void)
 	D3DXMATRIX matView;    // the view transform matrix	
 	D3DXMATRIX matRotateYaw;
 	D3DXMATRIX matRotatePitch;
-	D3DXMatrixRotationX(&matRotatePitch, curPitch);
+	D3DXMatrixRotationX(&matRotatePitch, -curPitch);
 	D3DXMatrixRotationZ(&matRotateYaw, curYaw);
 
 	D3DXVECTOR4 vecCamera;
