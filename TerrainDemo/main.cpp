@@ -16,11 +16,15 @@
 
 #define T_WIDTH		8.0f
 #define T_HEIGHT	8.0f
-#define T_STEPS		32
+#define T_STEPS		64
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))
+#define T_Y(i) (-(T_HEIGHT / 2.0f) + (i) * T_HEIGHT / T_STEPS)
+#define T_X(i) (-(T_WIDTH / 2.0f) + (i) * T_WIDTH / T_STEPS)
 
 #define ANGLE_DELTA (float)(M_PI / 32.0f)
+
+#define T_GENFUNC(x,y) (sin(2.0f * x + y) + sin(2.0f * y + x) - sin((x)+(y))) / 3.0f
 
 // include the Direct3D Library files
 #pragma comment (lib, "d3d9.lib")
@@ -30,8 +34,9 @@
 LPDIRECT3D9 d3d;    // the pointer to our Direct3D interface
 LPDIRECT3DDEVICE9 d3ddev;    // the pointer to the device class
 LPDIRECT3DVERTEXBUFFER9 terrainBuffer;
-LPDIRECT3DINDEXBUFFER9	indexBuffer;
 LPD3DXFONT font;
+D3DLIGHT9 light;
+D3DMATERIAL9 material;
 float curYaw = 0.0f;
 float curPitch = 0.0f;
 
@@ -41,8 +46,8 @@ void render_frame(void);    // renders a single frame
 void cleanD3D(void);    // closes Direct3D and releases memory
 void init_graphics(void);    // 3D declarations
 
-struct CUSTOMVERTEX {FLOAT X, Y, Z; DWORD COLOR;};
-#define CUSTOMFVF (D3DFVF_XYZ | D3DFVF_DIFFUSE)
+struct CUSTOMVERTEX {FLOAT X, Y, Z; D3DXVECTOR3 NORMAL; DWORD COLOR;};
+#define CUSTOMFVF (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_NORMAL)
 
 // the WindowProc function prototype
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -175,11 +180,22 @@ void initD3D(HWND hWnd)
 
 	init_graphics();    // call the function to initialize the triangle
 
-	d3ddev->SetRenderState(D3DRS_LIGHTING, FALSE);
-	//d3ddev->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+	d3ddev->SetRenderState(D3DRS_LIGHTING, TRUE);
+	d3ddev->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 	d3ddev->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
 	d3ddev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);	
-	d3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+	//d3ddev->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+	d3ddev->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_XRGB(31, 31, 31));
+
+	ZeroMemory(&light, sizeof(light));
+	light.Type = D3DLIGHT_DIRECTIONAL;
+	light.Diffuse.r = light.Diffuse.g = light.Diffuse.b = light.Diffuse.a = 0.75f;	
+	light.Direction.x = light.Direction.z = 1.0f;
+	light.Direction.y = 0.0f;
+	light.Range = 1000.0f;
+
+	d3ddev->SetLight(0, &light);
+	d3ddev->LightEnable(0, TRUE);
 }
 
 
@@ -202,7 +218,7 @@ void render_frame(void)
 		ntick = bukkits[bukidx].LowPart / 10000 - bukkits[pbuk].LowPart / 10000;
 	}
 
-	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(255, 255, 255), 1.0f, 0);
+	d3ddev->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
 	d3ddev->Clear(0, NULL, D3DCLEAR_ZBUFFER, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
 
 	d3ddev->BeginScene();
@@ -226,6 +242,10 @@ void render_frame(void)
 	}
 	font->DrawText(NULL, buff, -1, &r, DT_CALCRECT, D3DCOLOR_XRGB(1, 1, 1));
 	font->DrawText(NULL, buff, -1, &r, 0, D3DCOLOR_XRGB(0, 255, 0));
+
+	material.Diffuse.r = material.Diffuse.g = material.Diffuse.b = material.Diffuse.a = 1.0f;
+	material.Ambient = material.Diffuse;
+	d3ddev->SetMaterial(&material);
 
 	// SET UP THE PIPELINE    
 
@@ -255,16 +275,9 @@ void render_frame(void)
 
 	d3ddev->SetTransform(D3DTS_WORLD, &(matRotateYaw * matRotatePitch));	
 	
-	d3ddev->SetStreamSource(0, terrainBuffer, 0, sizeof(CUSTOMVERTEX));
-	d3ddev->SetIndices(indexBuffer);
+	d3ddev->SetStreamSource(0, terrainBuffer, 0, sizeof(CUSTOMVERTEX));	
 	
-	d3ddev->DrawIndexedPrimitive(
-		D3DPT_TRIANGLESTRIP, 
-		0,
-		0,
-		(T_STEPS + 1) * (T_STEPS + 1),
-		0, 
-		((2 * (T_STEPS + 1) * T_STEPS + T_STEPS - 1)) - 2);
+	d3ddev->DrawPrimitive(D3DPT_TRIANGLELIST, 0, T_STEPS * T_STEPS * 2);
 
 	d3ddev->EndScene();
 
@@ -277,8 +290,7 @@ void render_frame(void)
 
 // this is the function that cleans up Direct3D and COM
 void cleanD3D(void)
-{
-	indexBuffer->Release();
+{	
 	terrainBuffer->Release();
 	font->Release();
 	d3ddev->Release();    // close and release the 3D device
@@ -292,62 +304,55 @@ void init_graphics(void)
 	HRESULT hr = D3DXCreateFont(d3ddev, 17, 0, FW_NORMAL, 0, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Courier New"), &font );
 
 	d3ddev->CreateVertexBuffer(
-		(T_STEPS + 1) * (T_STEPS + 1) * sizeof(CUSTOMVERTEX),
+		(T_STEPS) * (T_STEPS) * 3 * 2 * sizeof(CUSTOMVERTEX),
 		D3DUSAGE_WRITEONLY,
 		CUSTOMFVF,
 		D3DPOOL_MANAGED,
 		&terrainBuffer,
 		NULL);
-	d3ddev->CreateIndexBuffer(
-		(2 * (T_STEPS + 1) * T_STEPS + T_STEPS - 1) * sizeof(short),
-		D3DUSAGE_WRITEONLY,
-		D3DFMT_INDEX16,
-		D3DPOOL_MANAGED,
-		&indexBuffer,
-		NULL);
 
 	CUSTOMVERTEX* vertices;
+	unsigned index = 0;
 	terrainBuffer->Lock(0, 0, (void**)&vertices, 0);
-	for (unsigned i = 0; i < T_STEPS + 1; i++) {
-		float y = -(T_HEIGHT / 2.0f) + i * T_HEIGHT / T_STEPS;
-		for (unsigned j = 0; j < T_STEPS + 1; j++) {
-			float x = -(T_WIDTH / 2.0f) + j * T_WIDTH / T_STEPS;
-			CUSTOMVERTEX& cur = vertices[T_OFF(j,i)];
-			cur.X = x;
-			cur.Y = y;
-			cur.Z = (float)sin((x+y)*M_PI/2.0) / 4.0f + (float)sin((x-y)*M_PI / 2.0) / 4.0f;
-			cur.COLOR = D3DCOLOR_XRGB(0, 0, 0);
+	for (unsigned i = 0; i < T_STEPS; i++) {
+		float y = T_Y(i);
+		for (unsigned j = 0; j < T_STEPS; j++) {
+			float x = T_X(j);		
+			CUSTOMVERTEX* cur = &vertices[index];
+			cur[0].X = x;
+			cur[0].Y = y;
+			cur[0].Z = T_GENFUNC(x, y);
+			cur[1].X = T_X(j + 1);
+			cur[1].Y = y;
+			cur[1].Z = T_GENFUNC(T_X(j + 1), y);
+			cur[2].X = x;
+			cur[2].Y = T_Y(i + 1);
+			cur[2].Z = T_GENFUNC(x, T_Y(i + 1));
+			cur[3] = cur[2];
+			cur[4] = cur[1];
+			cur[5].X = T_X(j + 1);
+			cur[5].Y = T_Y(i + 1);
+			cur[5].Z = T_GENFUNC(T_X(j+1),T_Y(i+1));
+			cur[0].COLOR = cur[1].COLOR = cur[2].COLOR = cur[3].COLOR = cur[4].COLOR = cur[5].COLOR = D3DCOLOR_XRGB(255, 255, 255);
+
+			{
+			D3DXVECTOR3 a(cur[0].X, cur[0].Y, cur[0].Z), b(cur[1].X, cur[1].Y, cur[1].Z), c(cur[2].X, cur[2].Y, cur[2].Z);
+			D3DXVECTOR3 n;
+			D3DXVec3Cross(&n, &(b-c), &(a-c));
+			D3DXVec3Normalize(&n, &n);
+			cur[0].NORMAL = cur[1].NORMAL = cur[2].NORMAL = n;
+			}
+
+			{
+			D3DXVECTOR3 a(cur[3].X, cur[3].Y, cur[3].Z), b(cur[4].X, cur[4].Y, cur[4].Z), c(cur[5].X, cur[5].Y, cur[5].Z);
+			D3DXVECTOR3 n;
+			D3DXVec3Cross(&n, &(b-c), &(a-c));
+			D3DXVec3Normalize(&n, &n);
+			cur[3].NORMAL = cur[4].NORMAL = cur[5].NORMAL = n;
+			}
+
+			index += 6;
 		}
 	}
 	terrainBuffer->Unlock();
-
-	short* indices;
-	indexBuffer->Lock(0, 0, (void**)&indices, 0);	
-	unsigned index = 0;
-	for (unsigned z = 0; z < T_STEPS; z++) {
-		if (z % 2) {
-			// odd
-			int x;
-			for (x = T_STEPS; x >= 0; x--) {
-				indices[index++] = x + (z * (T_STEPS + 1));
-				indices[index++] = x + ((z + 1) * (T_STEPS + 1));
-			}
-
-			if (z != T_STEPS - 1) {
-				indices[index++] = ++x + z * (T_STEPS + 1);
-			}
-		} else {
-			// even
-			int x;
-			for (x = 0; x < T_STEPS + 1; x++) {
-				indices[index++] = x + (z * (T_STEPS + 1));
-				indices[index++] = x + ((z + 1) * (T_STEPS + 1));
-			}
-
-			if (z != T_STEPS - 1) {
-				indices[index++] = --x + (z + 1) * (T_STEPS + 1);
-			}
-		}
-	}
-	indexBuffer->Unlock();
 }
