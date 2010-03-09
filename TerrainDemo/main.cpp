@@ -17,8 +17,8 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
-#define T_WIDTH		8.0f
-#define T_HEIGHT	8.0f
+#define T_WIDTH		32.0f
+#define T_HEIGHT	32.0f
 #define T_STEPS		256
 
 #define T_OFF(x,y) ((y) * ((T_STEPS) + 1) + (x))

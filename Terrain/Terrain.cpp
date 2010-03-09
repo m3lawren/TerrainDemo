@@ -16,8 +16,8 @@ namespace Terrain {
 		for (unsigned i = 0; i < _T_NUM_WEIGHTS; i++) {
 			_weights[i][0] = rfloat() * 7.0f - 3.5f;
 			_weights[i][1] = rfloat() * 7.0f - 3.5f;
-			_weights[i][2] = rfloat() * 2.0f;
-			_weights[i][3] = rfloat() * M_PI * 2.0f;
+			_weights[i][2] = rfloat() * 3.0f;
+			_weights[i][3] = rfloat() * M_PI * 2.0f + 0.5f;
 		}
 	}
 

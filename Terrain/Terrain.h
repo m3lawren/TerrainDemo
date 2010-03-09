@@ -1,7 +1,7 @@
 #ifndef __TERRAIN_TERRAIN_H__
 #define __TERRAIN_TERRAIN_H__
 
-#define _T_NUM_WEIGHTS 25
+#define _T_NUM_WEIGHTS 55
 
 namespace Terrain {
 
